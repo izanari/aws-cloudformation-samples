@@ -1,0 +1,111 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >
+    AWS CloudFormation Sample
+      Lambda Function 01
+
+Parameters:
+  CodeBucket:
+    Type: String
+  CodeKey:
+    Type: String
+  Funcname:
+    Type: String
+    Default: sample-cf-lambda01
+  Environment:
+    Type: String
+    AllowedValues: 
+      - dev
+      - stg
+      - prod
+    Default: dev
+
+Resources: 
+  lambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: AWS CLOUDFORMATION SAMPLE-01
+      FunctionName: !Ref Funcname
+      Handler: lambda_function.lambda_handler
+      MemorySize: 128
+      Runtime: python3.7 
+      Timeout: 60
+      Role: !GetAtt iamRole.Arn
+      Environment:
+        Variables:
+          LOGGING: DEBBUG
+      Code:
+        S3Bucket: !Ref CodeBucket
+        S3Key: !Ref CodeKey
+      Tags:
+        - Key: Owner
+          Value: SAMPLE
+        - Key: Environment
+          Value: !Ref Environment
+
+  lambdaVersion:
+    Type: AWS::Lambda::Version
+    Properties:
+      FunctionName: !Ref lambdaFunction
+
+  lambdaAlias:
+    Type: AWS::Lambda::Alias
+    Properties:
+      FunctionName: !Ref lambdaFunction
+      FunctionVersion: !GetAtt lambdaVersion.Version
+      Name: !Ref Environment
+
+  iamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Policies:
+        - 
+         PolicyName: !Sub "${Funcname}-AWSLambdaExecute"
+         PolicyDocument:
+           Version: "2012-10-17"
+           Statement:
+              - 
+                Effect: "Allow"
+                Action: "s3:GetObject"
+                Resource: "arn:aws:s3:::*"
+              -
+                Effect: "Allow"
+                Action: ["logs:CreateLogStream","logs:PutLogEvents"]
+                Resource: arn:aws:logs:*:*:*
+
+  logLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 1
+      LogGroupName: !Sub /aws/lambda/${lambdaFunction}
+
+  lambdaStartRule:
+    Type: AWS::Events::Rule
+    Properties:
+      ScheduleExpression: 'cron(0 9 * * ? *)'
+      State: ENABLED
+      Targets: 
+        - Arn: !Ref lambdaAlias
+          Id: !Sub "${Funcname}-Event"
+        
+  lambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref lambdaFunction
+      Principal: events.amazonaws.com
+      SourceArn: !Ref lambdaAlias
+
+Outputs:
+  lambdaFunction: 
+    Description: "create Lambda Funcion "
+    Value: !GetAtt lambdaFunction.Arn
