@@ -1,0 +1,133 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >
+  
+Parameters: 
+  MyBucketName:
+    Type: String 
+  Environment:
+    Type: String
+    AllowedValues: 
+      - dev
+      - stg
+      - prod
+    Default: dev
+  AliaseURL:
+    Type: String
+    Default: "none"
+  AcmArn:
+    Type: String
+    Default: "none"
+  IamCertificateId:
+    Type: String
+    Default: "none"
+  LogBucket:
+    Type: String
+  LogPrefix:
+    Type: String
+    Default: CLOUDFRONT
+  
+Conditions:
+  IsDefaultDomain: !Equals [ !Ref AliaseURL, "none" ]
+  IsUseAcm: !Not [ !Equals [ !Ref AcmArn, "none" ] ]
+  IsUseMyCert: !Not [ !Equals [ !Ref IamCertificateId, "none"] ]
+
+
+Resources: 
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties: 
+      AccessControl: BucketOwnerFullControl
+      BucketName: !Ref MyBucketName
+      WebsiteConfiguration: 
+        IndexDocument: index.html
+        ErrorDocument: /error/404.html
+      Tags:
+        - Key: Owner
+          Value: Sample
+        - Key: Environment
+          Value: !Ref Environment
+
+  CloudfrontOAI:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig: 
+        Comment: !Sub access-identity-${S3Bucket}
+
+  S3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref S3Bucket
+      PolicyDocument: 
+        Statement:
+          - Action: "s3:GetObject"
+            Effect: Allow
+            Resource: !Sub "arn:aws:s3:::${S3Bucket}/*"
+            Principal: 
+              CanonicalUser: !GetAtt CloudfrontOAI.S3CanonicalUserId
+
+  CloudfrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Aliases: 
+          - !If [ IsDefaultDomain, !Ref "AWS::NoValue", !Ref AliaseURL ]
+        #CacheBehaviors:
+        Comment: Sample CDN
+        #CustomErrorResponses:
+        DefaultCacheBehavior:
+          AllowedMethods: ["HEAD", "GET"]
+          Compress: false
+          DefaultTTL: 3600
+          #FieldLevelEncryptionId
+          CachedMethods: ["HEAD", "GET"]
+          #FieldLevelEncryptionId
+          ForwardedValues:
+              Cookies: 
+                Forward: none
+                #WhitelistedNames:
+              #Headers:
+              QueryString: false
+              #QueryStringCacheKeys:
+            #LambdaFunctionAssociations:
+          MaxTTL: 3600
+          MinTTL: 0
+          SmoothStreaming: false
+          TargetOriginId: !Sub "S3origin-${S3Bucket}"
+          #TrustedSigners:
+          ViewerProtocolPolicy: redirect-to-https
+        DefaultRootObject: index.html
+        Enabled: false
+        HttpVersion: http2
+        IPV6Enabled:  false
+        Logging:
+            Bucket: !Ref LogBucket
+            IncludeCookies: false
+            Prefix: !Sub ${LogPrefix}/
+        Origins:
+          - 
+            DomainName: !GetAtt S3Bucket.DomainName
+            Id: !Sub "S3origin-${S3Bucket}"
+            S3OriginConfig: 
+              OriginAccessIdentity:
+                !Sub "origin-access-identity/cloudfront/${CloudfrontOAI}"
+ 
+        PriceClass: PriceClass_200
+        #Restrictions: 
+        ViewerCertificate: 
+          AcmCertificateArn: !If [ IsUseAcm, !Ref AcmArn, !Ref "AWS::NoValue" ]
+          CloudFrontDefaultCertificate: !If [ IsDefaultDomain, "true", !Ref "AWS::NoValue" ]
+          IamCertificateId: !If [ IsUseMyCert, !Ref IamCertificateId, !Ref "AWS::NoValue" ]
+          MinimumProtocolVersion: TLSv1.2_2018
+          SslSupportMethod: !If [ IsDefaultDomain, !Ref "AWS::NoValue", "sni-only" ]
+        #WebACLId: 
+
+      Tags:
+        - Key: Owner
+          Value: Sample
+        - Key: Environment
+          Value: !Ref Environment
+
+Outputs:
+  S3Bucket:
+    Description: Information about the value
+    Value: !GetAtt S3Bucket.Arn

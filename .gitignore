@@ -1,2 +1,6 @@
 *.zip
 *.py
+*.temp
+*.tmp
+*_tmp.sh
+test-*
