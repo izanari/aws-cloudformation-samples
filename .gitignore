@@ -3,4 +3,5 @@
 *.temp
 *.tmp
 *_tmp.sh
-test-*
+test-*.yml
+local_config.sh
