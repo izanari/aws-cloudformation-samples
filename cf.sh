@@ -1,9 +1,24 @@
 #!/bin/sh
 
+# CONFIGファイルの取得
 CONFIG=$1
-echo ${CONFIG}
+
+# CONFIGファイルの存在確認とパラメータの取得
 if [ -f ${CONFIG} ] ; then
-    . ${CONFIG}
+    STACKNAME=`grep -w "^STACKNAME" ${CONFIG} | cut -d"=" -f2` 
+    TEMPLATE=`grep -w "^TEMPLATE" ${CONFIG} | cut -d"=" -f2`
+    PROFILE=`grep -w "^PROFILE" ${CONFIG} | cut -d"=" -f2`
+
+    pidx=`grep -n -w "^\[PARAMETER-OVERRIDES\]" ${CONFIG} | cut -d":" -f1`
+    pidx_sft=`expr ${pidx} + 1`
+    OVERRIDLIST=`tail -n+${pidx_sft} ${CONFIG}|xargs`
+
+    echo "+++CONFIGパラメータの確認+++"
+    echo "STACKNAME = ${STACKNAME}"
+    echo "TEMPLATE = ${TEMPLATE}"
+    echo "PROFILE = ${PROFILE}"
+    echo "OVERRIDLIST = [${OVERRIDLIST}]"
+    echo "+++++++++++++++++++++++++"
 else
     echo "${CONFIG}が見つかりません"
     RETVAL=1
@@ -17,6 +32,7 @@ case ${ANSWER} in
     [d/D] )
         echo "deploy start..."
         #aws cloudformation deploy --stack-name ${STACKNAME} --template-file --capabilities CAPABILITY_IAM --profile ${PROFILE} --parameter-overrides ${PARAMS}
+        aws cloudformation deploy --stack-name ${STACKNAME} --template-file ${TEMPLATE} --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --profile ${PROFILE} --parameter-overrides ${OVERRIDLIST}
     ;;
     [g/G] )
         echo "get UPDATE_FAILED event..."
