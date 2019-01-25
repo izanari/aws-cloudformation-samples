@@ -63,3 +63,4 @@ LogBucket="{Bucket name}" LogPrefix='{Key}'
 # 注意事項
 - CloudFrontのenableはfalseにしているので、利用する場合は、trueにしてからdeployしてください
 - LogBucketに指定したS3バケットには権限をつけておきましょう
+  - [こちら](https://docs.aws.amazon.com/ja_jp/AmazonCloudFront/latest/DeveloperGuide/AccessLogs.html#AccessLogsBucketAndFileOwnership)を参照ください
