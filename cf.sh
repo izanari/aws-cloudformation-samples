@@ -11,27 +11,45 @@ if [ -f ${CONFIG} ] ; then
 
     pidx=`grep -n -w "^\[PARAMETER-OVERRIDES\]" ${CONFIG} | cut -d":" -f1`
     pidx_sft=`expr ${pidx} + 1`
-    OVERRIDLIST=`tail -n+${pidx_sft} ${CONFIG}|xargs`
-
-    echo "+++CONFIGパラメータの確認+++"
-    echo "STACKNAME = ${STACKNAME}"
-    echo "TEMPLATE = ${TEMPLATE}"
-    echo "PROFILE = ${PROFILE}"
-    echo "OVERRIDLIST = [${OVERRIDLIST}]"
-    echo "+++++++++++++++++++++++++"
+    OVERRIDELIST=`tail -n+${pidx_sft} ${CONFIG}|xargs`
 else
     echo "${CONFIG}が見つかりません"
     RETVAL=1
     exit
 fi 
 
+
+# NULLチェック
+NULL_FLG=0
+OVERRIDE_FLG=0
+if [ "${STACKNAME}" = "" ] ; then NULL_FLG=1 ; echo "[ERROR] STACKNAMEが設定されていません。" ; fi
+if [ "${TEMPLATE}" = "" ] ; then NULL_FLG=1 ; echo "[ERROR] TEMPLATEが設定されていません。" ; fi
+if [ "${PROFILE}" = "" ] ; then NULL_FLG=1 ; echo "[ERROR] PROFILEが設定されていません。" ; fi
+if [ "${OVERRIDELIST}" = "" ] ; then OVERRIDE_FLG=1 ; fi
+
+# NULLチェックの対象があればシェルを終了させる
+if [ ${NULL_FLG} -eq 1 ] ; then exit; fi
+
+echo "+++CONFIGパラメータの確認+++"
+echo "STACKNAME   = ${STACKNAME}"
+echo "TEMPLATE    = ${TEMPLATE}"
+echo "PROFILE     = ${PROFILE}"
+echo "OVERRIDLIST = [${OVERRIDELIST}]"
+echo "+++++++++++++++++++++++++"
+
 echo "*** deploy(d) or get UPDATE_FAILED event(g) or validation(v) or delete(del) or cancel(c)? [d/g/v/del/c]"
+
 read ANSWER
 
 case ${ANSWER} in 
     [d/D] )
         echo "Deploy start..."
-        aws cloudformation deploy --stack-name ${STACKNAME} --template-file ${TEMPLATE} --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --profile ${PROFILE} --parameter-overrides ${OVERRIDLIST}
+        if [ ${OVERRIDE_FLG} -eq 1 ] ; then
+            aws cloudformation deploy --stack-name ${STACKNAME} --template-file ${TEMPLATE} --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --profile ${PROFILE}
+        else
+            aws cloudformation deploy --stack-name ${STACKNAME} --template-file ${TEMPLATE} --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --profile ${PROFILE} --parameter-overrides ${OVERRIDELIST}
+        fi
+
     ;;
     [g/G] )
         echo "Get FAILED event..."
