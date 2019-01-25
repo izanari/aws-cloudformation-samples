@@ -54,7 +54,7 @@ case ${ANSWER} in
     ;;
     [v/V] )
         echo "validation template..."
-        aws cloudformation validate-template --template-body file://${TEMPLATE} --profile ${PROFILE}
+        aws cloudformation validate-template --profile ${PROFILE} --template-body file://${TEMPLATE}
     ;;
     [c/C] )
         echo "Cancel..."

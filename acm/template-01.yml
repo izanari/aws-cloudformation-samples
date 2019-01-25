@@ -1,0 +1,31 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >
+  Certificate Manager
+
+Parameters: 
+  DomainName :
+    Type: String 
+  Environment:
+    Type: String
+    AllowedValues: 
+      - dev
+      - stg
+      - prod
+    Default: dev
+
+Resources: 
+
+  ACMCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref DomainName
+      ValidationMethod: DNS 
+      Tags: 
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Owner
+          Value: sample
+          
+Outputs:
+  certificate:
+    Value: !Ref ACMCertificate
