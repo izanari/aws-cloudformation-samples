@@ -31,7 +31,6 @@ read ANSWER
 case ${ANSWER} in 
     [d/D] )
         echo "deploy start..."
-        #aws cloudformation deploy --stack-name ${STACKNAME} --template-file --capabilities CAPABILITY_IAM --profile ${PROFILE} --parameter-overrides ${PARAMS}
         aws cloudformation deploy --stack-name ${STACKNAME} --template-file ${TEMPLATE} --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --profile ${PROFILE} --parameter-overrides ${OVERRIDLIST}
     ;;
     [g/G] )
@@ -40,7 +39,7 @@ case ${ANSWER} in
     ;;
     [v/V] )
         echo "validation template..."
-        aws cloudformation validate-template --template-body file://${TEMPLATE} --profile ${PROFILE}
+        aws cloudformation validate-template --profile ${PROFILE} --template-body file://${TEMPLATE}
     ;;
     [c/C] )
         echo "Cancel..."
