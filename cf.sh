@@ -25,21 +25,32 @@ else
     exit
 fi 
 
-echo "*** deploy(d) or get UPDATE_FAILED event(g) or validation(v) or cancel(c)? [d/g/v/c]"
+echo "*** deploy(d) or get UPDATE_FAILED event(g) or validation(v) or delete(del) or cancel(c)? [d/g/v/del/c]"
 read ANSWER
 
 case ${ANSWER} in 
     [d/D] )
-        echo "deploy start..."
+        echo "Deploy start..."
         aws cloudformation deploy --stack-name ${STACKNAME} --template-file ${TEMPLATE} --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --profile ${PROFILE} --parameter-overrides ${OVERRIDLIST}
     ;;
     [g/G] )
-        echo "get UPDATE_FAILED event..."
-        aws cloudformation describe-stack-events --stack-name ${STACKNAME} --profile ${PROFILE} | grep "UPDATE_FAILED" | sed -n '1p'
+        echo "Get FAILED event..."
+        aws cloudformation describe-stack-events --stack-name ${STACKNAME} --profile ${PROFILE} | grep -E 'UPDATE_FAILED|CREATE_FAILED' | sed -n '1p'
     ;;
     [v/V] )
-        echo "validation template..."
+        echo "Validation template..."
         aws cloudformation validate-template --profile ${PROFILE} --template-body file://${TEMPLATE}
+    ;;
+    "del" | "DELETE" )
+        echo "delete stach. Are you sure? [y]"
+        read OK
+        if test OK='y' -o OK='Y' ; then
+            echo "DELETE stack!!!"
+            aws cloudformation delete-stack --profile ${PROFILE} --stack-name ${STACKNAME}
+        else
+            echo "Delete stack cenceled..."
+            exit
+        fi
     ;;
     [c/C] )
         echo "Cancel..."
