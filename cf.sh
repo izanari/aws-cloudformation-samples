@@ -9,9 +9,10 @@ if [ -f ${CONFIG} ] ; then
     TEMPLATE=`grep -w "^TEMPLATE" ${CONFIG} | cut -d"=" -f2`
     PROFILE=`grep -w "^PROFILE" ${CONFIG} | cut -d"=" -f2`
 
+    IFS=$'\n'
     pidx=`grep -n -w "^\[PARAMETER-OVERRIDES\]" ${CONFIG} | cut -d":" -f1`
     pidx_sft=`expr ${pidx} + 1`
-    OVERRIDELIST=`tail -n+${pidx_sft} ${CONFIG}|xargs`
+    OVERRIDELIST+=(`tail -n+${pidx_sft} ${CONFIG}|xargs -L 1`)
 else
     echo "${CONFIG}が見つかりません"
     RETVAL=1
@@ -34,7 +35,7 @@ echo "+++CONFIGパラメータの確認+++"
 echo "STACKNAME   = ${STACKNAME}"
 echo "TEMPLATE    = ${TEMPLATE}"
 echo "PROFILE     = ${PROFILE}"
-echo "OVERRIDLIST = [${OVERRIDELIST}]"
+echo "OVERRIDLIST = [${OVERRIDELIST[@]}]"
 echo "+++++++++++++++++++++++++"
 
 echo "*** deploy(d) or get UPDATE_FAILED event(g) or validation(v) or delete(del) or cancel(c)? [d/g/v/del/c]"
@@ -47,7 +48,7 @@ case ${ANSWER} in
         if [ ${OVERRIDE_FLG} -eq 1 ] ; then
             aws cloudformation deploy --stack-name ${STACKNAME} --template-file ${TEMPLATE} --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --profile ${PROFILE}
         else
-            aws cloudformation deploy --stack-name ${STACKNAME} --template-file ${TEMPLATE} --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --profile ${PROFILE} --parameter-overrides ${OVERRIDELIST}
+            aws cloudformation deploy --stack-name ${STACKNAME} --template-file ${TEMPLATE} --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --profile ${PROFILE} --parameter-overrides ${OVERRIDELIST[@]}
         fi
 
     ;;
