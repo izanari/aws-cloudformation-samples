@@ -19,7 +19,6 @@ else
     exit
 fi 
 
-
 # NULLチェック
 NULL_FLG=0
 OVERRIDE_FLG=0
