@@ -1,0 +1,47 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+
+Paramters:
+  LambdaCode01:
+    Type: String 
+  FunctionName01:
+    Type: String
+  Func01Description:
+    Type: String
+  
+
+Resources: 
+  LambdaFunction01:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.7
+      CodeUri: !Ref LambdaCode01
+      #InlineCode:
+      FunctionName: !Ref FunctionName01
+      Description: !Ref Func01Description
+      MemorySize: 128
+      Timeout: 60
+      #Role:
+      #Policies:
+      Environment: 
+        Variables:
+          LOGGING: DEBUG
+      #VpcConfig:
+      #Events:
+      Tags:
+        Owner: sample
+        Environment: dev
+      #Tracing:
+      #KmsKeyArn:
+      #DeadLetterQueue:
+      #DeploymentPreference:
+      #Layers:
+      AutoPublishAlias: dev
+      #ReservedConcurrentExecutions: dev
+
+  logLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 1
+      LogGroupName: !Sub /aws/lambda/${LambdaFunction01}
