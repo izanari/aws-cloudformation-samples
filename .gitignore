@@ -4,4 +4,4 @@
 *.tmp
 *_tmp.sh
 test-*.yml
-local_config
+my_*_config

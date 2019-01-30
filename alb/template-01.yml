@@ -1,0 +1,149 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Application Load Balancer + Lambda 
+
+Parameters: 
+  Environment:
+    Type: String
+    AllowedValues: 
+      - dev
+      - stg
+      - prod
+    Default: dev
+  LogBucket:
+    Type: String
+    Description: "BucketName"
+  LogPrefix:
+    Type: String
+    Default: "ALB/"
+  Prefix:
+    Type: String
+    Default: "sample-"
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  SubnetIDs:
+    Type: List<AWS::EC2::Subnet::Id>
+  ACMArn:
+    Type: String
+  LambdaFuncArn:
+    Type: String
+  NotCreate:
+    Type: String
+    Default: "no"
+
+
+Conditions:
+  IsNotCreate: !Equals [ !Ref NotCreate, "yes" ]
+
+Resources: 
+  ALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      LoadBalancerAttributes:
+        - Key: access_logs.s3.enabled
+          Value: true 
+        - Key: access_logs.s3.bucket
+          Value: !Ref LogBucket
+        - Key: access_logs.s3.prefix
+          Value: !Ref LogPrefix
+        - Key: deletion_protection.enabled
+          Value: false
+        - Key: idle_timeout.timeout_seconds
+          Value: 60
+        - Key: routing.http2.enabled
+          Value: true
+      Name: cf-sample-01
+      Scheme: internet-facing 
+      SecurityGroups: 
+        - !Ref ALBSecurityGroup
+      #SubnetMappings:
+      Subnets: !Ref SubnetIDs
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Owner
+          Value: sample
+      Type: application
+      IpAddressType: ipv4
+
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub ${Prefix}-ALB
+      GroupDescription: "For Application Load Balancer"
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          FromPort: 443
+          ToPort: 443
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          FromPort: 80
+          ToPort: 80      
+      #SecurityGroupEgress:
+      #  - Security Group Rule
+      Tags:
+        - Key: Name
+          Value: !Sub ${Prefix}-ALB
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Owner
+          Value: sample
+
+  # ALBListner443:
+  #   Type: AWS::ElasticLoadBalancingV2::Listener
+  #   Condition: IsNotCreate
+  #   Properties:
+  #     Certificates:
+  #       - 
+  #         CertificateArn: !Ref ACMArn
+  #     DefaultActions:
+  #       - 
+  #         TargetGroupArn: 
+  #         Type: forward
+  #     LoadBalancerArn: !Ref ALB
+  #     Port: 443
+  #     Protocol: HTTPS
+  #     SslPolicy: ELBSecurityPolicy-2016-08
+
+  # ALBListner80:
+  #   Type: AWS::ElasticLoadBalancingV2::Listener
+  #   #Condition: IsNotCreate
+  #   Properties:
+  #     DefaultActions:
+  #       - 
+  #         TargetGroupArn: !Ref ALBTargetGroups01
+  #         Type: forward
+  #     LoadBalancerArn: !Ref ALB
+  #     Port: 80
+  #     Protocol: HTTP
+
+  # ALBTargetGroups01:
+  #   Type: AWS::ElasticLoadBalancingV2::TargetGroup
+  #   Properties:
+  #     TargetType: lambda
+  #     HealthCheckIntervalSeconds: 35
+  #     HealthCheckPath: /
+  #     #HealthCheckPort:
+  #     #HealthCheckProtocol:
+  #     HealthCheckTimeoutSeconds: 30
+  #     HealthyThresholdCount: 5
+  #     Matcher:
+  #       HttpCode: 200
+  #     Name: !Sub ${Prefix}-ALBTargetGroups01
+  #     Port: 80 
+  #     Protocol: HTTP 
+  #     Tags:
+  #       - Key: Environment
+  #         Value: !Ref Environment
+  #       - Key: Owner
+  #         Value: sample
+  #     TargetGroupAttributes:
+  #       - Key: lambda.multi_value_headers.enabled
+  #         Value: false
+  #     Targets:
+  #       - Id: !Ref LambdaFuncArn
+  #     #UnhealthyThresholdCount: 
+  #     VpcId: !Ref VpcId
