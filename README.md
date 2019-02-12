@@ -12,3 +12,6 @@ aws-cli/1.16.90 Python/3.7.2 Darwin/17.7.0 botocore/1.12.80
   - CloudFront -> s3 へ静的HTMLを配信するサンプルです。
 - [Certificate Manager](./acm/README.md)
   - ACMへサーバ証明書の発行リクエストをするサンプルです。 
+- [API gateway + Lambda](./apigateway/README.md)
+  - SAMを使ってAPI gatewayとLambdaを作成するサンプルです。
+  - SAMのざっくりとした使い方もまとめてあります。
