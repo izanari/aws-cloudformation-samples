@@ -1,0 +1,56 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+
+Parameters:
+  Logging:
+    Type: String 
+
+Resources: 
+  LambdaFunction01:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: index.lambda_handler
+      Runtime: python3.7
+      CodeUri: ./test-lambdadeploy/
+      #InlineCode:
+      FunctionName: test-lambdadeploy
+      Description: "Test CodeDeoloy for lambda function"
+      MemorySize: 128
+      Timeout: 60
+      Role: !GetAtt functionRole.Arn
+      #Policies:
+      Environment: 
+        Variables:
+          LOGGING: !Sub Logging
+      #VpcConfig:
+      #Events:
+      Tags:
+        Owner: sample
+        Environment: dev
+      #Tracing:
+      #KmsKeyArn:
+      #DeadLetterQueue:
+      #DeploymentPreference:
+      #Layers:
+      #AutoPublishAlias: dev
+      #ReservedConcurrentExecutions: dev
+
+  logLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 1
+      LogGroupName: !Sub /aws/lambda/test-lambdadeploy
+
+  functionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: test-lambdadeploy
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: "sts:AssumeRole"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
