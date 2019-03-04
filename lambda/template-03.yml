@@ -35,6 +35,12 @@ Resources:
       #AutoPublishAlias: dev
       #ReservedConcurrentExecutions: dev
 
+  LambdaFunction01Version:
+    Type: AWS::Lambda::Version
+    Properties: 
+      Description: "New Version"
+      FunctionName: !GetAtt LambdaFunction01.Arn
+
   logLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
