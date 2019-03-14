@@ -13,13 +13,13 @@ Resources:
     Properties:
       Handler: lambda_function.lambda_handler
       Runtime: python3.7
-      CodeUri: _sample/
+      CodeUri: !Sub ${Func01Name}/
       #InlineCode:
       FunctionName: !Sub ${Func01Name}
       #Description: !Sub ${Func01Description}
       MemorySize: 128
       #Timeout: 60
-      #Role:
+      Role:
       #Policies:
       Environment: 
         Variables:
@@ -44,5 +44,5 @@ Resources:
       #DeadLetterQueue:
       #DeploymentPreference:
       #Layers:
-      AutoPublishAlias: v1
+      #AutoPublishAlias: v1
       #ReservedConcurrentExecutions: dev    
