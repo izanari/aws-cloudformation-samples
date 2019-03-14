@@ -31,36 +31,26 @@ Conditions:
   IsUseAcm: !Not [ !Equals [ !Ref AcmArn, "none" ] ]
   IsUseMyCert: !Not [ !Equals [ !Ref IamCertificateId, "none"] ]
 
-
 Resources: 
   S3Bucket:
     Type: AWS::S3::Bucket
     Properties: 
       AccessControl: BucketOwnerFullControl
       BucketName: !Ref MyBucketName
+      WebsiteConfiguration: 
+        IndexDocument: index.html
+        ErrorDocument: /error/404.html
+        RoutingRules:
+          - 
+            RedirectRule: 
+                HostName: www.github.com
+                HttpRedirectCode: 301
+                Protocol: https
+                #ReplaceKeyPrefixWith: String
+                ReplaceKeyWith: xx/xx/
       Tags:
-        - Key: Owner
-          Value: Sample
         - Key: Environment
           Value: !Ref Environment
-
-  CloudfrontOAI:
-    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
-    Properties:
-      CloudFrontOriginAccessIdentityConfig: 
-        Comment: !Sub access-identity-${S3Bucket}
-
-  S3BucketPolicy:
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      Bucket: !Ref S3Bucket
-      PolicyDocument: 
-        Statement:
-          - Action: "s3:GetObject"
-            Effect: Allow
-            Resource: !Sub "arn:aws:s3:::${S3Bucket}/*"
-            Principal: 
-              CanonicalUser: !GetAtt CloudfrontOAI.S3CanonicalUserId
 
   CloudfrontDistribution:
     Type: AWS::CloudFront::Distribution
@@ -69,7 +59,7 @@ Resources:
         Aliases: 
           - !If [ IsDefaultDomain, !Ref "AWS::NoValue", !Ref AliaseURL ]
         #CacheBehaviors:
-        Comment: Sample CDN
+        Comment: This line is memo text.
         #CustomErrorResponses:
         DefaultCacheBehavior:
           AllowedMethods: ["HEAD", "GET"]
@@ -93,7 +83,7 @@ Resources:
           #TrustedSigners:
           ViewerProtocolPolicy: redirect-to-https
         DefaultRootObject: index.html
-        Enabled: false
+        Enabled: true
         HttpVersion: http2
         IPV6Enabled:  false
         Logging:
@@ -102,12 +92,11 @@ Resources:
             Prefix: !Sub ${LogPrefix}/
         Origins:
           - 
-            DomainName: !GetAtt S3Bucket.DomainName
+            CustomOriginConfig:
+              OriginProtocolPolicy: http-only
+            DomainName: !Sub ${S3Bucket}.s3-website-ap-northeast-1.amazonaws.com
             Id: !Sub "S3origin-${S3Bucket}"
-            S3OriginConfig: 
-              OriginAccessIdentity:
-                !Sub "origin-access-identity/cloudfront/${CloudfrontOAI}"
- 
+            #OriginPath:
         PriceClass: PriceClass_200
         #Restrictions: 
         ViewerCertificate: 
@@ -119,8 +108,6 @@ Resources:
         #WebACLId: 
 
       Tags:
-        - Key: Owner
-          Value: Sample
         - Key: Environment
           Value: !Ref Environment
 

@@ -1,17 +1,19 @@
 # AWS CloudFormation Sample
 CloudFormationのテンプレートサンプルです。
 
-## 構成について
+## テンプレート01
+S3オリジンとして設定した場合です
+### 構成について
 - S3+CloudFrontでコンテンツを配信する構成です
 - サーバ証明書をACMでサーバで取得した場合とインポートした場合に対応させてあります
 
-## 作成するリソース
+### 作成するリソース
 - CloudFront
 - CloudFront Origin Access Identity
 - S3 Bucket
 - S3 Bucket Policy
 
-## パラメータ
+### パラメータ
 - MyBucketName（必須）
   - コンテンツを置いてあるバケットのバケット名。先頭のs3://は不要です。
   - 例：mybucket
@@ -34,11 +36,11 @@ CloudFormationのテンプレートサンプルです。
   - dev,stg,prodのどれかを入力する
   - デフォルト値はdev
 
-### パラメータの制限事項
+#### パラメータの制限事項
 - AcmArn/IamCertificateIdを指定した場合、AliaseURLの設定をしてください。その逆もです。
  
-## 実行方法
-#### CNAME設定あり、サーバ証明書をACMで取得済の場合
+### 実行方法
+##### CNAME設定あり、サーバ証明書をACMで取得済の場合
 ```
 aws cloudformation deploy --template-file template-01.yml \
 --stack-name sample-s3-01-20190118 --capabilities CAPABILITY_IAM \
@@ -47,7 +49,7 @@ MyBucketName="{Bucket Name}"  AliaseURL="{your url}" \
 AcmArn='{ACM ARN}' IamCertificateId="none" \
 LogBucket="{Bucket name}" LogPrefix='{Key}' 
 ```
-#### CNAME設定なし、CloudFrontの証明書を利用する場合
+##### CNAME設定なし、CloudFrontの証明書を利用する場合
 ```
 aws cloudformation deploy --template-file template-01.yml \
 --stack-name sample-s3-01-20190118 --capabilities CAPABILITY_IAM \
@@ -56,11 +58,18 @@ MyBucketName="{Bucket Name}"  AliaseURL="none" \
 AcmArn='none' IamCertificateId="none" \
 LogBucket="{Bucket name}" LogPrefix='{Key}' 
 ```
-
-### テンプレート
+#### テンプレート
 [テンプレート](./template-01.yml)
 
-# 注意事項
+## テンプレート2
+ウェブサイトエンドポイントとして設定した場合です。リライトルールも追加してある。
+- [テンプレート](template-02.yml)
+### はまるポイント
+- `Origins`の`DomainName`をS3のGetAttr-WebsiteURLで取得すると、http://から返却されてしまう。そのため、決め打ち的なテンプレートとしている。
+```
+DomainName: !Sub ${S3Bucket}.s3-website-ap-northeast-1.amazonaws.com
+```
+## 注意事項
 - CloudFrontのenableはfalseにしているので、利用する場合は、trueにしてからdeployしてください
 - LogBucketに指定したS3バケットには権限をつけておきましょう
   - [こちら](https://docs.aws.amazon.com/ja_jp/AmazonCloudFront/latest/DeveloperGuide/AccessLogs.html#AccessLogsBucketAndFileOwnership)を参照ください
