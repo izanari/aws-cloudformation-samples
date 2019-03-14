@@ -65,7 +65,7 @@ LogBucket="{Bucket name}" LogPrefix='{Key}'
 ウェブサイトエンドポイントとして設定した場合です。リライトルールも追加してある。
 - [テンプレート](template-02.yml)
 ### はまるポイント
-- `Origins`の`DomainName`をS3のGetAttr-WebsiteURLで取得すると、http://から返却されてしまう。そのため、決め打ち的なテンプレートとしている。
+- `Origins`の`DomainName`をS3のGetAttr-WebsiteURLで取得すると、http://　から返却されてしまう。そのため、決め打ち的なテンプレートとしている。下の行の部分。
 ```
 DomainName: !Sub ${S3Bucket}.s3-website-ap-northeast-1.amazonaws.com
 ```

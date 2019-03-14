@@ -83,7 +83,7 @@ Resources:
           #TrustedSigners:
           ViewerProtocolPolicy: redirect-to-https
         DefaultRootObject: index.html
-        Enabled: true
+        Enabled: false
         HttpVersion: http2
         IPV6Enabled:  false
         Logging:
