@@ -1,0 +1,154 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+  #set of parameters
+  ArtifactStoreBucket:
+    # Bucket Name
+    Type: String
+  PipelineName:
+    Type: String
+  BranchName:
+    Type: String
+    Default: master 
+  RepoName: 
+    Type: String
+  ServerName:
+    Type: String
+    Default: "TEST"
+  CodeDeployRoleArn:
+    Type: String
+  CodePipelineRoleArn:
+    Type: String
+  #CodeCommitRepoArn:
+  #  Type: String
+  CloudwatchEventRoleArn:
+    Type: String
+
+Resources:
+  # Resouce No1
+  ProjectPipeline:
+    Type: "AWS::CodePipeline::Pipeline"
+    Properties:
+      ArtifactStore:
+        Location: !Ref ArtifactStoreBucket
+        Type: S3 
+      #DisableInboundStageTransitions:
+      #  - StageTransition
+      Name: !Ref PipelineName
+      RestartExecutionOnUpdate: false
+      RoleArn: !Ref CodePipelineRoleArn
+      Stages: #
+        - Name: Source
+          Actions:
+            - 
+              ActionTypeId:
+                Category: "Source"
+                Owner: AWS
+                Provider: "CodeCommit"
+                Version: 1
+              Configuration:
+                BranchName: !Ref BranchName
+                PollForSourceChanges: false
+                RepositoryName: !Ref RepoName 
+              #InputArtifacts:
+              Name: "Source"
+              OutputArtifacts:
+                -
+                  Name: "SourceArtifact"
+              Region: !Sub ${AWS::Region}
+              RunOrder: 1
+        - Name: Deploy 
+          Actions: 
+            -
+              Name: "Deploy"
+              ActionTypeId:
+                Category: "Deploy"
+                Owner: AWS
+                Provider: CodeDeploy 
+                Version: 1
+              Configuration: 
+                ApplicationName: !Ref ProjectDeployApp
+                DeploymentGroupName: !Ref ProjectDeployGroup 
+              #outputArtifacts
+              InputArtifacts:
+                -
+                  Name: "SourceArtifact"
+              Region: !Sub ${AWS::Region}
+  # Resouce No2
+  ProjectDeployApp:
+    Type: "AWS::CodeDeploy::Application"
+    Properties:
+      ApplicationName: !Ref PipelineName
+      ComputePlatform: "Server"
+  # Resource 5
+  ProjectDeployGroup:
+    Type: "AWS::CodeDeploy::DeploymentGroup"
+    Properties:
+      #AlarmConfiguration:
+      #  AlarmConfiguration
+      ApplicationName: !Ref ProjectDeployApp
+      AutoRollbackConfiguration:
+        Enabled: true 
+        Events:
+          - DEPLOYMENT_FAILURE
+      #AutoScalingGroups:
+      #  - String
+      #Deployment:
+      #  Deployment
+      DeploymentConfigName: "CodeDeployDefault.AllAtOnce"
+      DeploymentGroupName: !Ref PipelineName
+      DeploymentStyle:
+        DeploymentOption: "WITHOUT_TRAFFIC_CONTROL"
+        DeploymentType: "IN_PLACE"
+      Ec2TagFilters:
+        - 
+          Key: "Name"
+          Value: !Ref ServerName 
+          Type: "KEY_AND_VALUE"          
+      #Ec2TagSet:
+      #  Ec2TagSetList:
+      #LoadBalancerInfo:
+      #  LoadBalancerInfo
+      #OnPremisesInstanceTagFilters:
+      #  - TagFilter
+      #OnPremisesTagSet:
+      #  OnPremisesTagSet
+      ServiceRoleArn: !Ref CodeDeployRoleArn
+      #TriggerConfigurations:
+
+  CodePipeLineStartRule:
+    Type: "AWS::Events::Rule"
+    Properties:
+      Description: !Sub CodePipeLine ${ProjectPipeline} Start EventRule
+      EventPattern: {
+        "source": [
+          "aws.codecommit"
+        ],
+        "detail-type": [
+          "CodeCommit Repository State Change"
+        ],
+        "resources": [
+          "Fn::Sub" : "arn:aws:codecommit:${AWS::Region}:${AWS::AccountId}:${RepoName}"
+        ],
+        "detail": {
+          "event": [
+            "referenceCreated",
+            "referenceUpdated"
+          ],
+          "referenceType": [
+            "branch"
+          ],
+          "referenceName": [
+            "Ref" : "BranchName"
+          ]
+        }
+      }
+      Name: !Sub CodePipeLine-${AWS::Region}-${PipelineName}-StartRule
+      RoleArn: !Ref CloudwatchEventRoleArn
+      #ScheduleExpression: String
+      State: ENABLED
+      Targets:
+        - 
+          Arn: !Sub arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${PipelineName}
+          Id: !Ref ProjectPipeline
+          RoleArn: !Ref CloudwatchEventRoleArn

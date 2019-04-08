@@ -1,0 +1,267 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Resources:
+  CodeDeployServiceRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument: {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Sid": "",
+                    "Effect": "Allow",
+                    "Principal": {
+                        "Service": "codedeploy.amazonaws.com"
+                    },
+                    "Action": "sts:AssumeRole"
+                }
+            ]
+        }
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSCodeDeployRole
+      MaxSessionDuration: 3600
+      Path: "/service-role/"
+      #PermissionsBoundary: String
+      #Policies:
+      #  - !Ref CodeDeployServicePolicy
+      RoleName:  !Sub AWSCodeDeployServiceRole-${AWS::Region}
+      #Description: !Sub Created by ClooudFormation at ${AWS::StackName} ( ${AWS::StackId} )
+
+  CodePipeLineServiceRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+                Service: codepipeline.amazonaws.com
+            Action: "sts:AssumeRole"
+      #ManagedPolicyArns:
+      #  - String
+      MaxSessionDuration: 3600
+      Path: "/service-role/"
+      #PermissionsBoundary: String
+      #Policies:
+      #  - !GetAtt CodePipeLineServicePolicy.arn
+      RoleName:  !Sub AWSCodePipeLineServiceRole-${AWS::Region}
+      #Description: !Sub Created by ClooudFormation at ${AWS::StackName} ( ${AWS::StackId} )
+
+  CodePipeLineServicePolicy:
+    Type: "AWS::IAM::Policy"
+    Properties:
+      #Groups:
+      #  - String
+      PolicyDocument: 
+        {
+          "Statement": [
+            {
+                "Action": [
+                    "iam:PassRole"
+                ],
+                "Resource": "*",
+                "Effect": "Allow",
+                "Condition": {
+                    "StringEqualsIfExists": {
+                        "iam:PassedToService": [
+                            "cloudformation.amazonaws.com",
+                            "elasticbeanstalk.amazonaws.com",
+                            "ec2.amazonaws.com",
+                            "ecs-tasks.amazonaws.com"
+                        ]
+                    }
+                }
+            },
+            {
+                "Action": [
+                    "codecommit:CancelUploadArchive",
+                    "codecommit:GetBranch",
+                    "codecommit:GetCommit",
+                    "codecommit:GetUploadArchiveStatus",
+                    "codecommit:UploadArchive"
+                ],
+                "Resource": "*",
+                "Effect": "Allow"
+            },
+            {
+                "Action": [
+                    "codedeploy:CreateDeployment",
+                    "codedeploy:GetApplication",
+                    "codedeploy:GetApplicationRevision",
+                    "codedeploy:GetDeployment",
+                    "codedeploy:GetDeploymentConfig",
+                    "codedeploy:RegisterApplicationRevision"
+                ],
+                "Resource": "*",
+                "Effect": "Allow"
+            },
+            {
+                "Action": [
+                    "elasticbeanstalk:*",
+                    "ec2:*",
+                    "elasticloadbalancing:*",
+                    "autoscaling:*",
+                    "cloudwatch:*",
+                    "s3:*",
+                    "sns:*",
+                    "cloudformation:*",
+                    "rds:*",
+                    "sqs:*",
+                    "ecs:*"
+                ],
+                "Resource": "*",
+                "Effect": "Allow"
+            },
+            {
+                "Action": [
+                    "lambda:InvokeFunction",
+                    "lambda:ListFunctions"
+                ],
+                "Resource": "*",
+                "Effect": "Allow"
+            },
+            {
+                "Action": [
+                    "opsworks:CreateDeployment",
+                    "opsworks:DescribeApps",
+                    "opsworks:DescribeCommands",
+                    "opsworks:DescribeDeployments",
+                    "opsworks:DescribeInstances",
+                    "opsworks:DescribeStacks",
+                    "opsworks:UpdateApp",
+                    "opsworks:UpdateStack"
+                ],
+                "Resource": "*",
+                "Effect": "Allow"
+            },
+            {
+                "Action": [
+                    "cloudformation:CreateStack",
+                    "cloudformation:DeleteStack",
+                    "cloudformation:DescribeStacks",
+                    "cloudformation:UpdateStack",
+                    "cloudformation:CreateChangeSet",
+                    "cloudformation:DeleteChangeSet",
+                    "cloudformation:DescribeChangeSet",
+                    "cloudformation:ExecuteChangeSet",
+                    "cloudformation:SetStackPolicy",
+                    "cloudformation:ValidateTemplate"
+                ],
+                "Resource": "*",
+                "Effect": "Allow"
+            },
+            {
+                "Action": [
+                    "codebuild:BatchGetBuilds",
+                    "codebuild:StartBuild"
+                ],
+                "Resource": "*",
+                "Effect": "Allow"
+            },
+            {
+                "Effect": "Allow",
+                "Action": [
+                    "devicefarm:ListProjects",
+                    "devicefarm:ListDevicePools",
+                    "devicefarm:GetRun",
+                    "devicefarm:GetUpload",
+                    "devicefarm:CreateUpload",
+                    "devicefarm:ScheduleRun"
+                ],
+                "Resource": "*"
+            },
+            {
+                "Effect": "Allow",
+                "Action": [
+                    "servicecatalog:ListProvisioningArtifacts",
+                    "servicecatalog:CreateProvisioningArtifact",
+                    "servicecatalog:DescribeProvisioningArtifact",
+                    "servicecatalog:DeleteProvisioningArtifact",
+                    "servicecatalog:UpdateProduct"
+                ],
+                "Resource": "*"
+            },
+            {
+                "Effect": "Allow",
+                "Action": [
+                    "cloudformation:ValidateTemplate"
+                ],
+                "Resource": "*"
+            },
+            {
+                "Effect": "Allow",
+                "Action": [
+                    "ecr:DescribeImages"
+                ],
+                "Resource": "*"
+            }
+          ],
+          "Version": "2012-10-17"
+        }
+      PolicyName: !Sub AWSCodePipeLineServicePolicy-${AWS::Region}
+      Roles:
+        - !Ref CodePipeLineServiceRole
+      #Users:
+      #  - String
+  
+  CodePipeLineCloudWatchEventsRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument: {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Principal": {
+                            "Service": "events.amazonaws.com"
+                        },
+                        "Action": "sts:AssumeRole"
+                    }
+                ]
+            }
+          #ManagedPolicyArns:
+          #    - String
+      MaxSessionDuration: 3600
+      Path: "/service-role/"
+      #PermissionsBoundary: String
+      #Policies:
+      #    - !Ref CodePipeLineCloudWatchEventPolicy
+      RoleName: !Sub AWSEvents-CodePipeLineStartRuleRole-${AWS::Region}
+
+  CodePipeLineCloudWatchEventPolicy:
+    Type: "AWS::IAM::Policy"
+    Properties:
+            #Groups:
+            #    - String
+      PolicyDocument: {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Effect": "Allow",
+                "Action": [
+                    "codepipeline:StartPipelineExecution"
+                ],
+                "Resource": [
+                    "Fn::Sub" : "arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:*"
+                ]
+            }
+        ]
+      }
+      PolicyName: !Sub AWSEvent-CodePipeLine-StartRule-Policy-${AWS::Region}
+      Roles:
+        - !Ref CodePipeLineCloudWatchEventsRole
+      #Users:
+        #    - String
+    
+Outputs:
+  CodeDeployServiceRole:
+    Description: For CodeDeploy Service Role
+    Value: !GetAtt CodeDeployServiceRole.Arn
+    #Export:
+    #  Name: Value to export
+  CodePipeLineServiceRole:
+    Description: For CodePipeLine Service Role 
+    Value: !GetAtt CodePipeLineServiceRole.Arn
+  CodePipeLineCloudWatchEventsRole:
+    Description: For CloudwatchEvents StartRule CodePipeLine Service Role
+    Value: !GetAtt CodePipeLineCloudWatchEventsRole.Arn
