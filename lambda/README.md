@@ -31,3 +31,6 @@ aws cloudformation deploy --template-file template.yml --stack-name {your stac�
 - バージョンとエイリアスを自動的に作ってくれる
 - Tagsの書き方が違う
 - コードの置き場所の書き方が違う
+
+## Sample-04: SAM(Lambda+Cloundwatch Events)
+- - [テンプレート](./template-04.yml)
