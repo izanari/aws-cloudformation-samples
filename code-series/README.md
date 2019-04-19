@@ -8,3 +8,4 @@
 ### 参考ドキュメント
 - [CodeDeploy でデプロイグループのインスタンスにタグを付ける](https://docs.aws.amazon.com/ja_jp/codedeploy/latest/userguide/instances-tagging.html)
   - タグの指定方法はこのドキュメントを参考にすること
+- [AWS CodePipelineをCloudFormationで構築してみた](https://dev.classmethod.jp/cloud/aws/create_codepipeline_in_cloudformation/)

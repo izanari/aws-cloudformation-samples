@@ -57,6 +57,17 @@ Resources:
                   Name: "SourceArtifact"
               Region: !Sub ${AWS::Region}
               RunOrder: 1
+        - Name: Approval
+          Actions: 
+            -
+              ActionTypeId:
+                Category: Approval
+                Owner: AWS 
+                Provider: ""
+                Version: 1
+
+              Region: !Sub ${AWS::Region}
+              RunOrder: 2
         - Name: Deploy 
           Actions: 
             -
