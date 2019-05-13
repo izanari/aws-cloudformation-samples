@@ -1,0 +1,163 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: 'Project'
+
+Resources:
+  ProjectVPC:
+    Type: "AWS::EC2::VPC"
+    Properties:
+      CidrBlock: '10.1.0.0/16'
+      EnableDnsHostnames: True
+      EnableDnsSupport: True
+      InstanceTenancy: 'default'
+      Tags:
+        - Key: Name 
+          Value: !Sub ${ProjectName}-VPC
+
+  ProjectInternetGateway:
+    Type: "AWS::EC2::InternetGateway"
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-InetGW
+
+  AttachInternetGateway:
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    Properties:
+      InternetGatewayId: !Ref ProjectInternetGateway
+      VpcId: !Ref ProjectVPC
+
+  # ------ Public Subnet 1a ------
+  PublicSubnet1a:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      AvailabilityZone: 'ap-northeast-1a'
+      CidrBlock: '10.1.1.0/24'
+      MapPublicIpOnLaunch: True
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-PublicSubnet1a
+      VpcId: !Ref ProjectVPC
+  
+  PublicRouteTable1a:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-PublicRouteTable1a
+      VpcId: !Ref ProjectVPC
+  
+  PublicRouteTableAssoc1a:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId: !Ref PublicRouteTable1a
+      SubnetId: !Ref PublicSubnet1a    
+  
+  PublicSubnetDefaultRoute1a:
+    Type: "AWS::EC2::Route"
+    Properties:
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !Ref ProjectInternetGateway
+      RouteTableId: !Ref PublicRouteTable1a
+
+
+  # ------ Public Subnet 1c ------
+  PublicSubnet1c:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      AvailabilityZone: 'ap-northeast-1c'
+      CidrBlock: '10.1.2.0/24'
+      MapPublicIpOnLaunch: True
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-PublicSubnet1c
+      VpcId: !Ref ProjectVPC
+  
+  PublicRouteTable1c:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-PublicRouteTable1c
+      VpcId: !Ref ProjectVPC
+  
+  PublicRouteTableAssoc1c:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId: !Ref PublicRouteTable1c
+      SubnetId: !Ref PublicSubnet1c    
+  
+  PublicSubnetDefaultRoute1c:
+    Type: "AWS::EC2::Route"
+    Properties:
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !Ref ProjectInternetGateway
+      RouteTableId: !Ref PublicRouteTable1c
+
+
+  # ------ Private Subnet 1a ------
+  PrivateSubnet1a:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      AvailabilityZone: 'ap-northeast-1a'
+      CidrBlock: '10.1.10.0/24'
+      MapPublicIpOnLaunch: False
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-PrivateSubnet1a
+      VpcId: !Ref ProjectVPC
+
+  PrivateRouteTable1a:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-PrivateRouteTable1a
+      VpcId: !Ref ProjectVPC
+  
+  PrivateRouteTableAssoc1a:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1a
+      SubnetId: !Ref PrivateSubnet1a   
+
+  # ------ Private Subnet 1c ------
+  PrivateSubnet1c:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      AvailabilityZone: 'ap-northeast-1c'
+      CidrBlock: '10.1.20.0/24'
+      MapPublicIpOnLaunch: False
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-PrivateSubnet1c
+      VpcId: !Ref ProjectVPC
+
+  PrivateRouteTable1c:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-PrivateRouteTable1c
+      VpcId: !Ref ProjectVPC
+  
+  PrivateRouteTableAssoc1c:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1c
+      SubnetId: !Ref PrivateSubnet1c  
+
+Outputs:
+  PublicSubnet1aID:
+    Value: !Ref PublicSubnet1a
+  PublicSubnet1cID:
+    Value: !Ref PublicSubnet1c
+  PrivateRouteTable1aID:
+    Value: !Ref PrivateRouteTable1a
+  PrivateRouteTable1cID:
+    Value: !Ref PrivateRouteTable1c
+  VPCID:
+    Value: !Ref ProjectVPC
