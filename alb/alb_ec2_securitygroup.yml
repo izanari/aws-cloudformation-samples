@@ -1,0 +1,85 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: |
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: 'project'
+    AllowedPattern: "^[a-z][a-z0-9_¥-]*"
+  VpcID:
+    Type: AWS::EC2::VPC::Id
+
+Resources:
+  ApplicationLoadBlancerSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "-"
+      GroupName: !Sub ${ProjectName}-ALB
+      # SecurityGroupEgress:
+      #   - IpProtocol: tcp
+      #     FromPort: 80
+      #     ToPort: 80
+      #     DestinationSecurityGroupId: !Ref EC2InstanceSG
+      SecurityGroupIngress:
+        - IpProtocol: tcp 
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp 
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-ALB-SG
+      VpcId: !Ref VpcID
+
+  ALBSGOutBound:
+    Type: "AWS::EC2::SecurityGroupEgress"
+    Properties:
+      #CidrIp: String
+      #CidrIpv6: String
+      Description: "-"
+      #DestinationPrefixListId: String
+      DestinationSecurityGroupId: !Ref EC2SecurityGroup
+      FromPort: 80
+      GroupId: !Ref ApplicationLoadBlancerSecurityGroup
+      IpProtocol: tcp
+      ToPort: 80
+  
+  EC2SecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "-"
+      GroupName: !Sub ${ProjectName}-EC2
+      SecurityGroupEgress:
+        - CidrIp: 127.0.0.1/32
+          IpProtocol: -1
+      # SecurityGroupIngress:
+      #   - Ingress
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-EC2-SG
+      VpcId: !Ref VpcID
+
+  EC2SGInBound:
+    Type: "AWS::EC2::SecurityGroupIngress"
+    Properties:
+      #CidrIp: String
+      #CidrIpv6: String
+      Description: "-"
+      FromPort: 80
+      GroupId: !Ref EC2SecurityGroup
+      #GroupName: !Ref EC2SecurityGroup
+      IpProtocol: tcp
+      #SourcePrefixListId: String
+      SourceSecurityGroupId: !Ref ApplicationLoadBlancerSecurityGroup
+      #SourceSecurityGroupName: String
+      #SourceSecurityGroupOwnerId: String
+      ToPort: 80
+    
+Outputs:
+  ApplicationLoadBlancerSecurityGroupID:
+    Value: !Ref ApplicationLoadBlancerSecurityGroup
+  EC2SecurityGroupID:
+    Value: !Ref EC2SecurityGroup

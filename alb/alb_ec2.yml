@@ -1,0 +1,146 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: |
+  
+Parameters:
+  ProjectName:
+    Type: String
+    Default: 'project'
+    AllowedPattern: "^[a-z][a-z0-9_¥-]*"
+  Subnets:
+    Type: 'List<AWS::EC2::Subnet::Id>'
+  VpcID:
+    Type: AWS::EC2::VPC::Id
+  LogBucket:
+    Type: String
+  LogPrefix:
+    Type: String
+    Default: "ALB/project"
+    AllowedPattern: ".*[a-zA-Z0-9]$"
+  TargetInstance0:
+    Type: AWS::EC2::Instance::Id
+  ALBSG:
+    Type: AWS::EC2::SecurityGroup::Id
+  CNAME:
+    Type: String
+  HostZoneId:
+    Type: AWS::Route53::HostedZone::Id
+  SSLArn:
+    Type: String
+
+Resources:
+  ApplicationLoadBlancer:
+    Type: "AWS::ElasticLoadBalancingV2::LoadBalancer"
+    Properties:
+      IpAddressType: ipv4
+      LoadBalancerAttributes:
+        - Key: access_logs.s3.enabled 
+          Value: true 
+        - Key: access_logs.s3.bucket
+          Value: !Ref LogBucket
+        - Key: access_logs.s3.prefix
+          #Value: !Sub AWSLogs/${AWS::AccountId}/${LogPrefix}
+          Value: !Sub ${LogPrefix}
+        - Key: deletion_protection.enabled
+          Value: false
+        - Key: idle_timeout.timeout_seconds
+          Value: 60
+        - Key: routing.http2.enabled
+          Value: true
+      Name: !Sub ${ProjectName}-alb
+      Scheme: internet-facing 
+      SecurityGroups:
+        - !Ref ALBSG
+      #SubnetMappings:
+      #  - SubnetMapping
+      Subnets: !Ref Subnets
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-ALB
+      Type: application
+
+  ApplicationLoadBlancer80Listner:
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Properties:
+      #Certificates:
+      #  - CertificateArn:!Ref SSLArn
+      DefaultActions:
+        - 
+          Type: forward
+          TargetGroupArn: !Ref ALBTargetGroup01
+      LoadBalancerArn: !Ref ApplicationLoadBlancer
+      Port: 80 
+      Protocol: "HTTP"
+      #SslPolicy: String
+
+  ApplicationLoadBlancer443Listner:
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Properties:
+      Certificates:
+        - CertificateArn: !Ref SSLArn
+      DefaultActions:
+        - 
+          Type: forward
+          TargetGroupArn: !Ref ALBTargetGroup01
+      LoadBalancerArn: !Ref ApplicationLoadBlancer
+      Port: 443 
+      Protocol: "HTTPS"
+      #SslPolicy: String
+
+  ALBTargetGroup01:
+    Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
+    Properties:
+      HealthCheckEnabled: true
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: /check.html
+      HealthCheckPort: 'traffic-port'
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 5
+      Matcher:
+        HttpCode: '200'
+      Name: !Sub ${ProjectName}-ALBTargetGroup01
+      Port: 80
+      Protocol: HTTP
+      #Tags:
+      #  - 
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 300
+        - Key: slow_start.duration_seconds
+          Value: 0
+        - Key: stickiness.enabled
+          Value: true
+        - Key: stickiness.lb_cookie.duration_seconds
+          Value: 86400
+        - Key: stickiness.type
+          Value: lb_cookie
+      TargetType: instance
+      # port is 80/TCP
+      Targets: 
+        -
+          Id: !Ref TargetInstance0
+          Port: 80
+      UnhealthyThresholdCount: 4
+      VpcId: !Ref VpcID
+
+  ALBCNAME:
+    Type: "AWS::Route53::RecordSet"
+    Properties:
+      #AliasTarget:
+      #  AliasTarget
+      Comment: String
+      #Failover: String
+      #GeoLocation:
+      #  GeoLocation
+      #HealthCheckId: String
+      HostedZoneId: !Ref HostZoneId
+      #HostedZoneName: !Ref HostZoneName
+      #MultiValueAnswer: Boolean
+      Name: !Ref CNAME
+      #Region: String
+      ResourceRecords:
+        - !GetAtt ApplicationLoadBlancer.DNSName
+      #SetIdentifier: String
+      TTL: 300
+      Type: CNAME
+      #Weight: Integer
