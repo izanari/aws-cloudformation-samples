@@ -1,0 +1,361 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: |
+  Create ALB
+  Exist VPC and subnet
+Parameters:
+  # ALBの名前、小文字を使うこと
+  albname:
+    Description: "-"
+    Type: String
+    Default: "test" 
+  vpcid:
+    Description: "-"
+    Type: AWS::EC2::VPC::Id
+  subnetid01: # ALBにアタッチするPublic subnet
+    Description: "-"
+    Type: AWS::EC2::Subnet::Id
+  subnetid02: # ALBにアタッチするPublic subnet
+    Description: "-"
+    Type: AWS::EC2::Subnet::Id
+  logbucket:
+    Description: "-" 
+    Type: String
+  logprefix:
+    Description: "-"
+    Type: String
+    Default: "ALB"
+  # ACM証明書のARNを指定する
+  certificate01:
+    Description: "-"
+    Type: String
+    #AllowedPattern: ^(arn:aws:acm:)
+  certificate02:
+    Description: "-"
+    Type: String
+    #AllowedPattern: ^(arn:aws:acm:)
+  host01:
+    Type: String
+  host02:
+    Type: String
+  host01privatesubnetid:
+    Type: AWS::EC2::Subnet::Id
+  host02privatesubnetid:
+    Type: AWS::EC2::Subnet::Id
+  hostzoneid:
+    Type: String
+#Metadata:
+#Mappings:  
+#Conditions:
+  
+Resources:
+  alb:
+    Type: "AWS::ElasticLoadBalancingV2::LoadBalancer"
+    Properties:
+      IpAddressType: ipv4
+      LoadBalancerAttributes:
+        - Key: access_logs.s3.enabled
+          Value: true 
+        - Key: access_logs.s3.bucket
+          Value: !Ref logbucket
+        - Key: access_logs.s3.prefix
+          Value: !Ref logprefix
+        - Key: deletion_protection.enabled
+          Value: false
+        - Key: idle_timeout.timeout_seconds
+          Value: 60
+        - Key: routing.http2.enabled
+          Value: true
+      Name: !Ref albname
+      Scheme: internet-facing
+      SecurityGroups:
+        - !Ref albsg
+      #SubnetMappings:
+      #  - SubnetMapping
+      Subnets: 
+        - !Ref subnetid01
+        - !Ref subnetid02
+      Tags:
+        - Name: cloudformation:stack-id
+          Value: !Ref AWS::StackId
+        - Name: cloudformation:stack-name
+          Value: !Ref AWS::StackName
+      Type: application
+  
+  # ALBにアタッチするセキュリティグループ
+  albsg:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "-"
+      GroupName: !Sub ${albname}-ALBSG
+      #SecurityGroupEgress:
+      #  - Egress
+      # とりあえずIPを指定しておく
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          CidrIp: 219.101.159.1/32
+          FromPort: 443
+          ToPort: 443
+        - IpProtocol: tcp
+          CidrIp: 219.101.159.1/32
+          FromPort: 80
+          ToPort: 80
+      Tags:
+        - Key: Name
+          Value: !Sub ${albname}-ALBSG
+      VpcId: !Ref vpcid
+
+  # ec2にアタッチするグループ
+  # このSGをEC2にアタッチする
+  ec2sg:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "-"
+      GroupName: !Sub ${albname}-EC2SG
+      #SecurityGroupEgress:
+      #  - Egress
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourceSecurityGroupId: !Ref albsg
+      Tags:
+        - Key: Name
+          Value: !Sub ${albname}-EC2SG
+      VpcId: !Ref vpcid
+  
+  # ALBターゲットグループ01
+  albtargetgroup01:
+    Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
+    Properties:
+      HealthCheckEnabled: True
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: /
+      HealthCheckPort: traffic-port
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 5
+      Matcher:
+        HttpCode: 200
+      Name: !Sub ${albname}-tg01
+      Port: 80
+      Protocol: HTTP
+      Tags:
+        - Name: cloudformation:stack-id
+          Value: !Ref AWS::StackId
+        - Name: cloudformation:stack-name
+          Value: !Ref AWS::StackName
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 300
+        - Key: stickiness.enabled
+          Value: false
+        - Key: stickiness.type
+          Value: lb_cookie
+        - Key: stickiness.lb_cookie.duration_seconds
+          Value: 86400
+      TargetType: instance
+      Targets: 
+        - Id: !Ref www01
+          Port: 80
+      UnhealthyThresholdCount: 2
+      VpcId: !Ref vpcid
+  
+  # ALBターゲットグループ02
+  albtargetgroup02:
+    Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
+    Properties:
+      HealthCheckEnabled: True
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: /
+      HealthCheckPort: traffic-port
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 5
+      Matcher:
+        HttpCode: 200
+      Name: !Sub ${albname}-tg02
+      Port: 80
+      Protocol: HTTP
+      Tags:
+        - Name: cloudformation:stack-id
+          Value: !Ref AWS::StackId
+        - Name: cloudformation:stack-name
+          Value: !Ref AWS::StackName
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 300
+        - Key: stickiness.enabled
+          Value: false
+        - Key: stickiness.type
+          Value: lb_cookie
+        - Key: stickiness.lb_cookie.duration_seconds
+          Value: 86400
+      TargetType: instance
+      Targets: 
+        - Id: !Ref www02
+          Port: 80
+      UnhealthyThresholdCount: 2
+      VpcId: !Ref vpcid
+
+  alblistener443:
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Properties:
+      Certificates: 
+        - CertificateArn: !Ref certificate01
+      DefaultActions: 
+        - Type: fixed-response
+          FixedResponseConfig:
+              StatusCode: 403
+              MessageBody: Not authorized Access
+              ContentType: text/plain
+      LoadBalancerArn: !Ref alb
+      Port: 443
+      Protocol: HTTPS
+      #SslPolicy: String
+  
+  albcertificates:
+    Type: "AWS::ElasticLoadBalancingV2::ListenerCertificate"
+    Properties:
+      Certificates: 
+      # リスナーで指定しているデフォルトはここでは指定しない
+      #  - CertificateArn: !Ref certificate01
+        - CertificateArn: !Ref certificate02
+      ListenerArn: !Ref alblistener443
+
+  # ターゲットグループ01へのルール
+  alblistnerrule01:
+    Type: "AWS::ElasticLoadBalancingV2::ListenerRule"
+    Properties:
+      Actions: 
+        - TargetGroupArn: !Ref albtargetgroup01
+          Order: 1
+          Type: forward
+      Conditions: #required
+        - Field: host-header
+          HostHeaderConfig:
+            Values: 
+              - !Ref host01
+      ListenerArn: !Ref alblistener443
+      Priority: 1
+  
+  # ターゲットグループ02へのルール
+  alblistnerrule02:
+    Type: "AWS::ElasticLoadBalancingV2::ListenerRule"
+    Properties:
+      Actions: 
+        - TargetGroupArn: !Ref albtargetgroup02
+          Order: 1
+          Type: forward
+      Conditions: #required
+        - Field: host-header
+          HostHeaderConfig:
+            Values: 
+              - !Ref host02
+      ListenerArn: !Ref alblistener443
+      Priority: 2
+
+  # エイリアスレコードを登録する
+  albaliasrecord:
+    Type: "AWS::Route53::RecordSetGroup"
+    Properties:
+      Comment: "-"
+      HostedZoneId: !Ref hostzoneid
+      #HostedZoneName: String
+      RecordSets:
+        - Name: !Ref host01
+          Type: A 
+          AliasTarget:
+              DNSName: !GetAtt alb.DNSName
+              HostedZoneId: !GetAtt alb.CanonicalHostedZoneID
+        - Name: !Ref host02
+          Type: A 
+          AliasTarget:
+              DNSName: !GetAtt alb.DNSName
+              HostedZoneId: !GetAtt alb.CanonicalHostedZoneID
+  
+  # EC2 Iam role
+  EC2IAMRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM
+      AssumeRolePolicyDocument: {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Sid": "",
+                    "Effect": "Allow",
+                    "Principal": {
+                        "Service": "ec2.amazonaws.com"
+                    },
+                    "Action": "sts:AssumeRole"
+                }
+            ]
+        }
+      Path: "/ec2/"
+      MaxSessionDuration: 3600
+      RoleName: !Sub ${albname}-Role
+
+  EC2IAMProfile:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      Path: "/ec2/"
+      Roles:
+        - !Ref EC2IAMRole
+      InstanceProfileName: !Sub ${albname}-Profile
+
+  # スポットインスタンス起動用テンプレート
+  spotinsttemplate:
+    Type: "AWS::EC2::LaunchTemplate"
+    Properties:
+      LaunchTemplateName: spotinsttemplate
+      LaunchTemplateData:
+        InstanceMarketOptions:
+          SpotOptions:
+            SpotInstanceType: one-time
+            InstanceInterruptionBehavior: terminate
+          MarketType: spot
+        ImageId: ami-068a6cefc24c301d2
+        InstanceType: t3.micro
+        IamInstanceProfile: 
+          Arn: !GetAtt EC2IAMProfile.Arn
+        SecurityGroupIds: 
+          - !Ref ec2sg
+        UserData:
+          Fn::Base64: |
+            #!/bin/bash
+            timedatectl set-timezone Asia/Tokyo
+            systemctl start amazon-ssm-agent
+            yum -y install httpd.x86_64
+            systemctl start httpd
+
+  # EC2インスタンス01
+  www01:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      LaunchTemplate:
+        LaunchTemplateId: !Ref spotinsttemplate
+        Version: !GetAtt spotinsttemplate.LatestVersionNumber
+      SubnetId: !Ref host01privatesubnetid
+      Tags:
+        - Key: Name 
+          Value: !Sub ${albname}-www-01
+        - Key: HostName
+          Value: !Ref host01
+
+  # EC2インスタンス02
+  www02:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      LaunchTemplate:
+        LaunchTemplateId: !Ref spotinsttemplate
+        Version: !GetAtt spotinsttemplate.LatestVersionNumber
+      SubnetId: !Ref host02privatesubnetid
+      Tags:
+        - Key: Name 
+          Value: !Sub ${albname}-www-02
+        - Key: HostName
+          Value: !Ref host02
+Outputs:
+  albhost:
+    Value: !GetAtt alb.DNSName
