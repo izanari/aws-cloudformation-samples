@@ -1,0 +1,37 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: |
+  
+#Parameters:
+  
+#Metadata:
+  
+#Mappings:
+  
+#Conditions:
+  
+Resources:
+  # スポットインスタンス起動用テンプレート
+  spotinsttemplate:
+    Type: "AWS::EC2::LaunchTemplate"
+    Properties:
+      LaunchTemplateName: spotinsttemplate
+      LaunchTemplateData:
+        InstanceMarketOptions:
+          SpotOptions:
+            SpotInstanceType: one-time
+            InstanceInterruptionBehavior: terminate
+          MarketType: spot
+      ImageId: ami-068a6cefc24c301d2
+      InstanceType: t3.micro
+#      IamInstanceProfile: !Ref EC2IAMProfile
+#      SecurityGroupIds: !Ref ec2sg
+      # UserData:
+      #   Fn::Base64: |
+      #     #!/bin/bash
+      #     timedatectl set-timezone 'Asia/Tokyo'
+      #     systemctl start amazon-ssm-agent
+      #     yum -y install httpd.x86_64
+      #     systemctl start httpd
+#Transform:
+  
+#Outputs:

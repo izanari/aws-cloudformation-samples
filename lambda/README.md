@@ -1,7 +1,7 @@
 # AWS CloudFormation Sample
 CloudFormationのテンプレートサンプルです。
 
-## Sample01：Lambda 関数とCloudwatchイベントを作成します
+## Sample01：Cloudwatchイベント(cron)からLambdaを実行する
 - [テンプレート](./template-01.yml)
 - Lambda Function作成時に、バージョンとエイリアスの作成も行います。
 ### 作成するリソース
@@ -32,5 +32,10 @@ aws cloudformation deploy --template-file template.yml --stack-name {your stac�
 - Tagsの書き方が違う
 - コードの置き場所の書き方が違う
 
-## Sample-04: SAM(Lambda+Cloundwatch Events)
-- - [テンプレート](./template-04.yml)
+## Sample03：SAMを使ってLambda関数を作成する
+- sample02にversionを追加したテンプレ。`AutoPublisAlias`を指定すると自動的にバージョンも生成されるため、このテンプレは使わない。
+
+## Sample04: [SAMの場合] Cloundwatch Events(cron)からLambdaを実行する
+### Cronからlambdaを実行するサンプル
+- [テンプレート](./template-04.yml)
+  - sample01よりも記述が少なくなっている。これはsamが自動的に生成してくれるからで、自動で生成されるのか嫌な場合はsample01のように記述しましょう

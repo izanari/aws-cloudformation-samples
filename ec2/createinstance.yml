@@ -1,0 +1,134 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: |
+  
+Parameters:
+  ProjectName:
+    Type: String
+  SrvName:
+    Type: String
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+  Zone:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Default: ap-northeast-1a
+  InstanceType:
+    Type: String
+    Default: t3.small
+    AllowedValues:
+      - t3.micro
+      - t3.small
+      - t3.medium
+      - t3.large
+  KeyPair:
+    Type: AWS::EC2::KeyPair::KeyName
+  SGIds:
+    Type: List<AWS::EC2::SecurityGroup::Id>
+
+
+Resources:
+
+  EC2IAMRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM
+      AssumeRolePolicyDocument: {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Sid": "",
+                    "Effect": "Allow",
+                    "Principal": {
+                        "Service": "ec2.amazonaws.com"
+                    },
+                    "Action": "sts:AssumeRole"
+                }
+            ]
+        }
+      Path: "/ec2/"
+      MaxSessionDuration: 3600
+      RoleName: !Sub ${ProjectName}-${SrvName}-Role
+
+  EC2IAMProfile:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      Path: "/ec2/"
+      Roles:
+        - !Ref EC2IAMRole
+      InstanceProfileName: !Sub ${ProjectName}-${SrvName}-Profile
+
+  EC2Instance01:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      #AdditionalInfo: String
+      #Affinity: String
+      AvailabilityZone: !Ref Zone 
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            DeleteOnTermination: True
+            Encrypted: true
+            #Iops:
+            #SnapshotId:
+            VolumeSize: 8
+            VolumeType: gp2
+        - DeviceName: /dev/sdf
+          Ebs:
+            DeleteOnTermination: True
+            Encrypted: True
+            #Iops:
+            #SnapshotId:
+            VolumeSize: 1
+            VolumeType: gp2            
+      #CreditSpecification:
+      #  CPUCredits: unlimited
+      DisableApiTermination: False
+      EbsOptimized: True
+      #ElasticGpuSpecifications:
+      #  - ElasticGpuSpecification
+      #ElasticInferenceAccelerators:
+      #  - ElasticInferenceAccelerator
+      #HostId: String
+      IamInstanceProfile: !Ref EC2IAMProfile
+      ImageId: ami-00d101850e971728d  # Amazon Linux2
+      InstanceInitiatedShutdownBehavior: stop # or shutdown
+      InstanceType: !Ref InstanceType
+      #Ipv6AddressCount: Integer
+      #Ipv6Addresses:
+      #  - InstanceIpv6Address
+      #KernelId: String
+      KeyName: !Ref KeyPair
+      #LaunchTemplate:
+      #  LaunchTemplateSpecification
+      #LicenseSpecifications:
+      #  - LicenseSpecification
+      #Monitoring: Boolean
+      #NetworkInterfaces:
+      #  - NetworkInterface
+      #PlacementGroupName: String
+      #PrivateIpAddress: String
+      #RamdiskId: String
+      SecurityGroupIds: !Ref SGIds
+      #SecurityGroups:
+      #  - String
+      #SourceDestCheck: Boolean
+      #SsmAssociations:
+      #  - SsmAssociation
+      SubnetId: !Ref SubnetId
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-${SrvName}
+      #Tenancy: String
+      UserData: 
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          timedatectl set-timezone Asia/Tokyo
+          mkfs -t ext4 /dev/sdf
+          mkdir /data
+          echo "/dev/sdf /data ext4 defaults 1 1" >> /etc/fstab
+          mount -a
+          yum -y update
+          systemctl enable amazon-ssm-agent
+          reboot
+
+#Outputs:

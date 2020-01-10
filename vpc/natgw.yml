@@ -4,34 +4,47 @@ Description: |
 Parameters:
   PublicSubet1aID:
     Type: AWS::EC2::Subnet::Id
-  PrivateRouteTable1a:
+  PrivateRouteTable01:
     Type: String
+    AllowedPattern: ^rtb\-[0-9a-z]{17}
+  PrivateRouteTable02:
+    Type: String
+    AllowedPattern: ^rtb\-[0-9a-z]{17}
   ProjectName:
     Type: String
     Default: 'Project'
 
 Resources:
   # --- for PublicSubnet 1a ---
-  ForNatGatewayPublicSubnet1a:
+  ForNatGatewayPublicSubnet01:
     Type: "AWS::EC2::EIP"
     Properties:
       Domain: 'vpc'
       #Tags:
       #  - Key: Name
-      #    Value: !Sub ${ProjectName}-ForNatGatewayPublicSubnet1a
+      #    Value: !Sub ${ProjectName}-ForNatGatewayPublicSubnet01
   
-  NatGatewayPublicSubnet1a:
+  # NAT GWをForNatGatewayPublicSubnet01に作成する
+  NatGatewayPublicSubnet01:
     Type: "AWS::EC2::NatGateway"
     Properties:
-      AllocationId: !GetAtt ForNatGatewayPublicSubnet1a.AllocationId
+      AllocationId: !GetAtt ForNatGatewayPublicSubnet01.AllocationId
       SubnetId: !Ref PublicSubet1aID
       Tags:
         - Key: Name 
-          Value: !Sub ${ProjectName}-NatGatewayPublicSubnet1a
+          Value: !Sub ${ProjectName}-NatGatewayPublicSubnet01
 
   RouteTableAddPrivateSubnet1a:
     Type: "AWS::EC2::Route"
     Properties:
       DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId: !Ref NatGatewayPublicSubnet1a
-      RouteTableId: !Ref PrivateRouteTable1a
+      NatGatewayId: !Ref NatGatewayPublicSubnet01
+      RouteTableId: !Ref PrivateRouteTable01
+
+  # PublicSubnet1aのNAT gatewayにルーティングさせる
+  RouteTableAddPrivateSubnet1c:
+    Type: "AWS::EC2::Route"
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGatewayPublicSubnet01
+      RouteTableId: !Ref PrivateRouteTable02

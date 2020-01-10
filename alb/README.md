@@ -1,4 +1,20 @@
-# Application Load Balancer SAM template 
+# Application Load Balancer template
+## ALBを作成するテンプレート
+- [template02.yml](template-02.yml)
+### 想定しているシナリオ
+- EC2をALB配下に配置する
+- ALBにSSLをアタッチする
+- SSLはACMに設定されており、2つのSSLを設定する
+### 事前に準備しておくリソース
+- VPCおよびパブリックサブネット2つ
+- EC2インスタンス２個
+- Route53のホストzone
+
+
+### 参考ドキュメント
+- [CloudFormationでALBを構築する](https://dev.classmethod.jp/cloud/aws/cloudformation-alb/)
+
+
 ## ALBを作成するテンプレート
 - Application Load Balancerを作成します
 - CNAMEで登録され、SSL証明書を関連づけます
