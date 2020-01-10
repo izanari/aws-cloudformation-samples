@@ -89,7 +89,6 @@ Resources:
       GroupName: !Sub ${albname}-ALBSG
       #SecurityGroupEgress:
       #  - Egress
-      # とりあえずIPを指定しておく
       SecurityGroupIngress:
         - IpProtocol: tcp
           CidrIp: 0.0.0.0/0
