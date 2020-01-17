@@ -1,0 +1,157 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: |
+  
+Parameters:
+  Prefix:
+    Type: String
+    Default: 'dev-v2'
+  Env:
+    Type: String
+    Default: dev 
+    AllowedValues:
+      - dev
+      - stg
+      - prod
+  ThisVPCId:
+    Type: AWS::EC2::VPC::Id
+    Description: "Use VpCID that is already set."
+
+Mappings:
+  Vpc:
+    Cidr:
+      prod: "10.6.0.0/16"
+      dev: "10.6.0.0/16"  
+  Subnet:
+    InboundCidrIp:
+      prod: "0.0.0.0/0"
+      dev: "0.0.0.0/0"
+  
+Resources:
+  AlbSg:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "This security group is for ALB"
+      GroupName: !Sub ${Prefix}-alb-sg
+      SecurityGroupEgress:  # Outbound
+        - IpProtocol: tcp
+          CidrIp: !FindInMap [Vpc, Cidr, !Ref Env]
+          ToPort: 80
+          FromPort: 80
+      SecurityGroupIngress: # Inbound
+        - IpProtocol: tcp
+          CidrIp: !FindInMap [Subnet, InboundCidrIp, !Ref Env]
+          ToPort: 80
+          FromPort: 80
+        - IpProtocol: tcp
+          CidrIp: !FindInMap [Subnet, InboundCidrIp, !Ref Env]
+          ToPort: 443
+          FromPort: 443
+      Tags:
+        - Key: "Name" 
+          Value: !Sub ${Prefix}-alb-sg
+      VpcId: !Ref ThisVPCId
+
+  Ec2WwwSg:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "This security group is for Web EC2 Instances"
+      GroupName: !Sub ${Prefix}-ec2-www-sg
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          ToPort: 443
+          FromPort: 443
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          ToPort: 80
+          FromPort: 80
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          ToPort: 25
+          FromPort: 25
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          ToPort: 80
+          FromPort: 80
+          SourceSecurityGroupId: !Ref AlbSg
+      Tags:
+        - Key: "Name" 
+          Value: !Sub ${Prefix}-ec2-www-sg
+      VpcId: !Ref ThisVPCId 
+  
+  Ec2CartSg:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "This security group is for Cart System EC2 Instances"
+      GroupName: !Sub ${Prefix}-ec2-cart-sg
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          ToPort: 443
+          FromPort: 443
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          ToPort: 80
+          FromPort: 80
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          ToPort: 25
+          FromPort: 25
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          ToPort: 80
+          FromPort: 80
+          SourceSecurityGroupId: !Ref AlbSg
+      Tags:
+        - Key: "Name" 
+          Value: !Sub ${Prefix}-ec2-cart-sg
+      VpcId: !Ref ThisVPCId 
+
+  RdsSg:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "This security group is for RDS"
+      GroupName: !Sub ${Prefix}-rds-sg
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          ToPort: 80
+          FromPort: 80
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          ToPort: 443
+          FromPort: 443
+      Tags:
+        - Key: Name 
+          Value: !Sub ${Prefix}-rds-sg
+      VpcId: !Ref ThisVPCId 
+
+  CartSgOutboundRule: # CARTシステムにセットするアウトバウント用SG
+    Type: "AWS::EC2::SecurityGroupEgress"
+    Properties:
+      Description: "This rule is for cart system sg outbound."
+      DestinationSecurityGroupId: !Ref RdsSg
+      FromPort: 3306
+      GroupId: !Ref Ec2CartSg
+      IpProtocol: tcp
+      ToPort: 3306
+  
+  RdsSgInboundRule: # RDSにセットするインバウンドSG
+    Type: "AWS::EC2::SecurityGroupIngress"
+    Properties:
+      Description: "This rule is for rds sg inbound."
+      FromPort: 3306
+      GroupId: !Ref RdsSg
+      IpProtocol: tcp
+      SourceSecurityGroupId: !Ref Ec2CartSg
+      ToPort: 3306
+
+Outputs:
+  AlbSg:
+    Value: !Ref AlbSg 
+  Ec2WwwSg:
+    Value: !Ref Ec2WwwSg
+  Ec2CartSg:
+    Value: !Ref Ec2CartSg
+  RdsSg:
+    Value: !Ref RdsSg
