@@ -1,0 +1,148 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: |
+  
+Parameters:
+  Prefix:
+    Type: String
+    Default: 'dev-v2'
+  Env:
+    Type: String
+    Default: dev 
+    AllowedValues:
+      - dev
+      - stg
+      - prod
+  Dbname:
+    Type: String
+    Default: appdb
+  DbUserName:
+    Type: String
+    Default: appuser
+  DbPassword:
+    Type: String 
+  RootPassword: 
+    Type: String 
+  InstanceType:
+    Type: String
+    AllowedValues: 
+      - t3.micro
+      - t3.nano
+      - t3.large
+      - m5.large
+    Default: t3.micro
+  ThisVPCId:
+    Type: AWS::EC2::VPC::Id
+    Description: "Use VpCID that is already set."
+Mappings:
+  Vpc:
+    Cidr:
+      prod: "10.6.0.0/16"
+      dev: "10.6.0.0/16"  
+  Subnet:
+    InboundCidrIp:
+      prod: "0.0.0.0/0"
+      dev: "0.0.0.0/0"
+
+Resources:
+  # EC2 Iam role
+  EC2IAMRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+      Policies:
+        - 
+          PolicyName: !Sub ${Prefix}-ec2-Policy-${AWS::StackName}
+          PolicyDocument: {
+              "Version": "2012-10-17",
+              "Statement": [
+                  {
+                    "Effect": "Allow",
+                    "Action":[ 
+                        "s3:GetObject",
+                        "s3:PutObject",
+                        "s3:PutObjectAcl",
+                        "s3:GetEncryptionConfiguration"
+                    ], 
+                    "Resource": "*"
+                  }
+              ]
+          }
+      AssumeRolePolicyDocument: {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Sid": "",
+                    "Effect": "Allow",
+                    "Principal": {
+                        "Service": "ec2.amazonaws.com"
+                    },
+                    "Action": "sts:AssumeRole"
+                }
+            ]
+        }
+      Path: "/ec2/"
+      MaxSessionDuration: 3600
+      RoleName: !Sub ${Prefix}-ec2-Role-${AWS::StackName}
+
+  EC2IAMProfile:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      Path: "/ec2/"
+      Roles:
+        - !Ref EC2IAMRole
+      InstanceProfileName: !Sub ${Prefix}-Profile-${AWS::StackName}
+
+  Ec2Sg:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "This security group is for ALB"
+      GroupName: !Sub ${Prefix}-sg
+      SecurityGroupEgress:  # Outbound
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          ToPort: 80
+          FromPort: 80
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          ToPort: 443
+          FromPort: 443
+      SecurityGroupIngress: # Inbound
+        - IpProtocol: tcp
+          CidrIp: !FindInMap [Subnet, InboundCidrIp, !Ref Env]
+          ToPort: 80
+          FromPort: 80
+        - IpProtocol: tcp
+          CidrIp: !FindInMap [Subnet, InboundCidrIp, !Ref Env]
+          ToPort: 443
+          FromPort: 443
+      VpcId: !Ref ThisVPCId
+  # スポットインスタンス起動用テンプレート
+  Ec2TemplateSpotInstance:
+    Type: "AWS::EC2::LaunchTemplate"
+    Properties:
+      LaunchTemplateName: !Sub ${Prefix}-SpotInstance-PowerCMS
+      LaunchTemplateData:
+        InstanceMarketOptions:
+          SpotOptions:
+            SpotInstanceType: one-time
+            InstanceInterruptionBehavior: terminate
+          MarketType: spot
+        ImageId: ami-068a6cefc24c301d2
+        InstanceType: !Ref InstanceType
+        IamInstanceProfile: 
+          Arn: !GetAtt EC2IAMProfile.Arn
+        SecurityGroupIds: 
+          - !Ref Ec2Sg
+        UserData:
+          Fn::Base64: 
+            !Sub |
+              #!/bin/bash
+              timedatectl set-timezone 'Asia/Tokyo'
+              yum -y install mariadb.x86_64;
+              yum -y install mariadb-server.x86_64;
+              systemctl start mariadb;
+              echo "create database ${Dbname} character set utf8;" | mysql -u root;
+              echo "grant all on ${Dbname}.* to ${DbUserName}@localhost identified by '${DbPassword}';" | mysql -u root;
+              mysqladmin -u root password '${RootPassword}';
